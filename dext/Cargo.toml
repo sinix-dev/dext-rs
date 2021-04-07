@@ -12,5 +12,5 @@ memmap = "0.7"
 walkdir = "2.3"
 html-minifier = "3.0"
 deflate = { version = "0.9", features = ["gzip"] }
-hyper = { version = "0.14", features = ["server", "http1", "http2", "tcp"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+hyper = { version = "0.14", features = ["server", "http1", "http2", "tcp"] }
