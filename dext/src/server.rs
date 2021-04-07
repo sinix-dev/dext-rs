@@ -21,12 +21,17 @@ impl Config {
 
     let content = self.archive.get(kb.0..kb.1);
 
-    Response::builder()
-      .status(StatusCode::OK)
-      .header(header::CONTENT_ENCODING, "gzip")
-      .header(header::CONTENT_DISPOSITION, "inline")
-      .header(header::CONTENT_TYPE, "text/html")
-      .body(Body::from(content.unwrap()))
+    match content {
+      Some(content) => Response::builder()
+        .status(StatusCode::OK)
+        .header(header::CONTENT_ENCODING, "gzip")
+        .header(header::CONTENT_DISPOSITION, "inline")
+        .header(header::CONTENT_TYPE, "text/html")
+        .body(Body::from(content)),
+      None => Response::builder()
+        .status(404)
+        .body(Body::from("Oops! No such file exist")),
+    }
   }
 
   fn new(path: &Path) -> Self {
