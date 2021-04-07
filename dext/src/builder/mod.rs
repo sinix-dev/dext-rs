@@ -3,17 +3,17 @@ extern crate hyper;
 extern crate memmap;
 extern crate walkdir;
 
-mod utils;
-
-use fst::Streamer;
-use fst::{Map, MapBuilder};
-use memmap::Mmap;
+use fst::MapBuilder;
 use std::fs::read;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::{BufWriter, Error};
 use std::path::Path;
 use walkdir::WalkDir;
+
+pub fn pack_in_u64(offset: usize, length: usize) -> u64 {
+  (length as u64) | ((offset as u64) << 32)
+}
 
 pub fn build(src: &Path, target: &Path) -> Result<(), Error> {
   let dext_path = target.with_extension("dext");
@@ -32,11 +32,20 @@ pub fn build(src: &Path, target: &Path) -> Result<(), Error> {
     for entry in WalkDir::new(src).into_iter().filter_map(|e| e.ok()) {
       if entry.path().is_file() {
         let content = get_compressed_content(entry.path()).unwrap();
-        let off = utils::pack_in_u64(offset, content.len());
+        let off = pack_in_u64(offset, content.len());
 
         archive.write_all(&content).unwrap();
         index
-          .insert(&entry.path().to_str().unwrap().as_bytes(), off)
+          .insert(
+            &entry
+              .path()
+              .strip_prefix(src)
+              .unwrap()
+              .to_str()
+              .unwrap()
+              .as_bytes(),
+            off,
+          )
           .unwrap();
 
         offset += content.len();
@@ -45,14 +54,6 @@ pub fn build(src: &Path, target: &Path) -> Result<(), Error> {
 
     dext.write_all(archive.buffer()).unwrap();
     index.finish().unwrap();
-  }
-  let mmap = unsafe { Mmap::map(&File::open(&index_path)?)? };
-  let map = Map::new(mmap).unwrap();
-  let mut stream = map.stream();
-
-  while let Some((k, v)) = stream.next() {
-    let kb = utils::unpack_from_u64(v);
-    println!("{:?} {:} {:} {:}", k, v, kb.0, kb.1);
   }
 
   Ok(())
